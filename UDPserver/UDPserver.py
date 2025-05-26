@@ -20,11 +20,11 @@ def handle_client(address, port, filename):
                 request, _ = client_socket.recvfrom(1024)
                 client_request = request.decode()
             
-                if client_request.split(" ").[0] == "FILE" and client_request.split(" ").[2] == "CLOSE":
+                if client_request.split(" ")[0] == "FILE" and client_request.split(" ")[2] == "CLOSE":
                     response = f"FILE {filename} CLOSE_OK"
                     client_socket.sendto(response.encode(), address)
                     break
-                elif client_request.split(" ").[0] == "FILE" and client_request.split(" ").[2] == "GET":
+                elif client_request.split(" ")[0] == "FILE" and client_request.split(" ")[2] == "GET":
                     start = int(client_request.split(" ")[4])
                     end = int(client_request.split(" ")[6])
                     f.seek(start)

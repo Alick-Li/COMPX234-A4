@@ -1,5 +1,7 @@
 import socket
 import base64
+import sys
+import os
 
 def send_and_receive(socket, address, port, message):
     timeout = 1000
@@ -49,3 +51,35 @@ def download_file(socket, address, port, filename):
                 return True
 
         return False
+
+def main():
+    if len(sys.argv) != 4:
+        return
+    
+    server_address = sys.argv[1]
+    server_port = int(sys.argv[2])
+    file_list = sys.argv[3]
+
+    if not os.path.exists(file_list):
+        print(f"File list {file_list} not found")
+        return
+    
+    # Read files to download
+    with open(file_list, 'r') as f:
+        files = [line.strip() for line in f if line.strip()]
+    
+    if not files:
+        print("No files specified in the file list")
+        return
+    
+    # Create client socket
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+    # Download each file
+    for file_name in files:
+        download_file(client_socket, server_address, server_port, file_name)
+
+    client_socket.close()
+
+if __name__ == "__main__":
+    main()
