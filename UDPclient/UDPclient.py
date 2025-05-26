@@ -13,18 +13,30 @@ def send_and_receive(socket, address, port, message):
             socket.sendto(message.encode(), (address, port))
             response, _ = socket.recvfrom(2048)
             return response.decode()
-        except socket.timeout:
+        except TimeoutError:
             retry_count += 1
             timeout *= 2
+            print(f"Timeout, retrying... (attempt {retry_count})")
+        except Exception as e:
+            print(f"Error in send_and_receive: {e}")
+            break
     
     return None
 
 def download_file(socket, address, port, filename):
     response = send_and_receive(socket, address, port, f"DOWNLOAD {filename}")
 
-    if response.startswith("OK"):
-        file_size = int(response.split()[3])
-        data_port = int(response.split()[5])
+    if response is None:
+        print(f"Failed to download {filename}: No response from server.")
+        return False
+    elif response.startswith("ERR"):
+        print(f"Server error: {response}")
+        return False
+    elif response.startswith("OK"):
+        file_size = int(response.split(" ")[3])
+        data_port = int(response.split(" ")[5])
+
+        print(f"Downloading {filename} of size {file_size} bytes...")
 
         with open(filename, 'wb') as f:
             bytes_received = 0
@@ -32,9 +44,10 @@ def download_file(socket, address, port, filename):
                 start = bytes_received
                 end = min(start + 999, file_size - 1)
 
-                response = send_and_receive(socket, address, data_port, f"GET {filename} {start} {end}")
+                response = send_and_receive(socket, address, data_port, f"FILE {filename} GET START {start} END {end}")
 
-                if response.startswith("FILE"):
+                if response == None or not response.startswith("FILE") or "OK" not in response:
+                    print(f"\nError receiving data for {filename}")
                     return False
             
                 data_start = response.find("DATA") + 5
@@ -45,9 +58,9 @@ def download_file(socket, address, port, filename):
                 bytes_received += len(file_data)
                 print('*', end='')
 
-            close_response = send_and_receive(socket, address, port, f"CLOSE {filename}")
+            close_response = send_and_receive(socket, address, port, f"FILE {filename} CLOSE")
             if close_response and close_response.startswith("FILE") and "CLOSE_OK" in close_response:
-                print("\nFile download completed successfully.")
+                print(f"\nSuccessfully downloaded {filename}")
                 return True
 
         return False
