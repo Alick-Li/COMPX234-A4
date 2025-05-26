@@ -7,10 +7,14 @@ def send_and_receive(socket, address, port, message):
     retry_count = 0
 
     while retry_count < 5:
-        socket.settimeout(timeout / 1000)
-        socket.sendto(message.encode(), (address, port))
-        response, _ = socket.recvfrom(2048)
-        return response.decode()
+        try:
+            socket.settimeout(timeout / 1000)
+            socket.sendto(message.encode(), (address, port))
+            response, _ = socket.recvfrom(2048)
+            return response.decode()
+        except socket.timeout:
+            retry_count += 1
+            timeout *= 2
     
     return None
 
@@ -31,6 +35,18 @@ def download_file(socket, address, port, filename):
 
                 if response.startswith("FILE"):
                     return False
+            
+                data_start = response.find("DATA") + 5
+                base64_data = response[data_start:]
+                file_data = base64.b64decode(base64_data)
+                f.seek(start)
+                f.write(file_data)
+                bytes_received += len(file_data)
+                print('*', end='')
 
-        return True
-    
+            close_response = send_and_receive(socket, address, port, f"CLOSE {filename}")
+            if close_response and close_response.startswith("FILE") and "CLOSE_OK" in close_response:
+                print("\nFile download completed successfully.")
+                return True
+
+        return False
