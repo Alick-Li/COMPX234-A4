@@ -1,52 +1,39 @@
 import socket
 import base64
 import threading
+import random
+import os
 
-def send_and_receive(socket, address, port, message):
-    timeout = 1000
-    retry_count = 0
+def handle_client(address, port, filename):
+    try:
+        client_port = random.randint(50000, 51000)
+        client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        client_socket.bind(('', client_port))
 
-    while retry_count < 5:
-        try:
-            socket.settimeout(timeout / 1000)
-            socket.sendto(message.encode(), (address, port))
-            response, _ = socket.recvfrom(2048)
-            return response.decode()
-        except socket.timeout:
-            retry_count += 1
-            timeout *= 2
-    
-    return None
+        file_size = os.path.getsize(filename)
 
-def download_file(socket, address, port, filename):
-    response = send_and_receive(socket, address, port, f"DOWNLOAD {filename}")
+        response = f"OK {filename} {file_size} {client_port}"
+        client_socket.sendto(response.encode(), (address, port))
 
-    if response.startswith("OK"):
-        file_size = int(response.split()[3])
-        data_port = int(response.split()[5])
-
-        with open(filename, 'wb') as f:
-            bytes_received = 0
-            while bytes_received < file_size:
-                start = bytes_received
-                end = min(start + 999, file_size - 1)
-
-                response = send_and_receive(socket, address, data_port, f"GET {filename} {start} {end}")
-
-                if response.startswith("FILE"):
-                    return False
+        with open(filename, 'rb') as f:
+            while True:
+                request, _ = client_socket.recvfrom(1024)
+                client_request = request.decode()
             
-                data_start = response.find("DATA") + 5
-                base64_data = response[data_start:]
-                file_data = base64.b64decode(base64_data)
-                f.seek(start)
-                f.write(file_data)
-                bytes_received += len(file_data)
-                print('*', end='')
+                if client_request.split(" ").[0] == "FILE" and client_request.split(" ").[2] == "CLOSE":
+                    response = f"FILE {filename} CLOSE_OK"
+                    client_socket.sendto(response.encode(), address)
+                    break
+                elif client_request.split(" ").[0] == "FILE" and client_request.split(" ").[2] == "GET":
+                    start = int(client_request.split(" ")[4])
+                    end = int(client_request.split(" ")[6])
+                    f.seek(start)
+                    data = f.read(end - start + 1)
+                    base64_data = base64.b64encode(data).decode()
+                    response = f"DATA {filename} {start} {end} {base64_data}"
+                    client_socket.sendto(response.encode(), address)
+            
+            client_socket.close()
 
-            close_response = send_and_receive(socket, address, port, f"CLOSE {filename}")
-            if close_response and close_response.startswith("FILE") and "CLOSE_OK" in close_response:
-                print("\nFile download completed successfully.")
-                return True
-
-        return False
+    except Exception as e:
+        print(f"Error handling client {address}:{port} - {e}")
