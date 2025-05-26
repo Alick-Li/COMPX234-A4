@@ -37,3 +37,31 @@ def handle_client(address, port, filename):
 
     except Exception as e:
         print(f"Error in file transmission: {e}")
+
+def main():
+    if len(os.sys.argv) != 2:
+        print("Usage: python UDPserver.py <port>")
+        return
+    
+    server_port = int(os.sys.argv[1])
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    server_socket.bind(('', server_port))
+    print(f"Server started on port {server_port}")
+
+    while True:
+        try:
+            request, client_address = server_socket.recvfrom(1024)
+            client_request = request.decode()
+
+            if client_request.split(" ")[0] == "DOWNLOAD":
+                filename = client_request.split(" ")[1]
+                if os.path.exists(filename):
+                    threading.Thread(target=handle_client, args=(client_address[0], client_address[1], filename)).start()
+                else:
+                    response = f"ERROR {filename} NOT_FOUND"
+                    server_socket.sendto(response.encode(), client_address)
+        except Exception as e:
+            print(f"Error in server loop: {e}")
+
+if __name__ == "__main__":
+    main()
