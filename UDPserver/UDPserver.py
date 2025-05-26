@@ -4,7 +4,7 @@ import threading
 import random
 import os
 
-def handle_client(address, port, filename):
+def handle_client(client_address, server_port, filename):
     try:
         client_port = random.randint(50000, 51000)
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -12,7 +12,7 @@ def handle_client(address, port, filename):
 
         file_size = os.path.getsize(filename)
         response = f"OK {filename} SIZE {file_size} PORT {client_port}"
-        client_socket.sendto(response.encode(), (address, port))
+        client_socket.sendto(response.encode(), client_address)
 
         with open(filename, 'rb') as f:
             while True:
@@ -22,7 +22,7 @@ def handle_client(address, port, filename):
 
                 if parts[0] == "FILE" and parts[2] == "CLOSE":
                     response = f"FILE {filename} CLOSE_OK"
-                    client_socket.sendto(response.encode(), (address, port))
+                    client_socket.sendto(response.encode(), client_address)
                     break
                 elif parts[0] == "FILE" and parts[2] == "GET":
                     start = int(parts[4])
@@ -31,7 +31,7 @@ def handle_client(address, port, filename):
                     data = f.read(end - start + 1)
                     base64_data = base64.b64encode(data).decode()
                     response = f"FILE {filename} OK START {start} END {end} DATA {base64_data}"
-                    client_socket.sendto(response.encode(), (address, port))
+                    client_socket.sendto(response.encode(), client_address)
 
         client_socket.close()
     except FileNotFoundError:
@@ -60,7 +60,7 @@ def main():
             if parts[0] == "DOWNLOAD":
                 filename = parts[1]
                 if os.path.exists(filename):
-                    threading.Thread(target=handle_client, args=(client_address[0], client_address[1], filename)).start()
+                    threading.Thread(target=handle_client, args=(client_address, server_port, filename)).start()
                 else:
                     response = f"ERR {filename} NOT_FOUND"
                     server_socket.sendto(response.encode(), client_address)

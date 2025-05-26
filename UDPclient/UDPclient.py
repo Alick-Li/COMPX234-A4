@@ -27,7 +27,7 @@ def download_file(socket, address, port, filename):
     if response is None:
         print(f"Failed to download {filename}: No response from server.")
         return False
-    elif response.startswith("ERROR"):
+    elif response.startswith("ERR"):
         print(f"Server error: {response}")
         return False
     elif response.startswith("OK"):
@@ -36,7 +36,7 @@ def download_file(socket, address, port, filename):
             file_size = int(parts[3])
             data_port = int(parts[5])
 
-            print(f"Downloading {filename} of size {file_size} bytes...")
+            print(f"Downloading {filename} (size: {file_size} bytes)", end='', flush=True)
 
             with open(filename, 'wb') as f:
                 bytes_received = 0
@@ -65,8 +65,8 @@ def download_file(socket, address, port, filename):
                 if close_response and close_response.startswith("FILE") and "CLOSE_OK" in close_response:
                     print(f"\nSuccessfully downloaded {filename}")
                     return True
-        except (IndexError, ValueError):
-            print(f"Error parsing server response for {filename}")
+        except (IndexError, ValueError) as e:
+            print(f"Error parsing server response for {filename}: {e}")
             return False
 
     return False
