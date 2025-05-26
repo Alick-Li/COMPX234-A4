@@ -21,5 +21,16 @@ def download_file(socket, address, port, filename):
         file_size = int(response.split()[3])
         data_port = int(response.split()[5])
 
+        with open(filename, 'wb') as f:
+            bytes_received = 0
+            while bytes_received < file_size:
+                start = bytes_received
+                end = min(start + 999, file_size - 1)
+
+                response = send_and_receive(socket, address, data_port, f"GET {filename} {start} {end}")
+
+                if response.startswith("FILE"):
+                    return False
+
         return True
     
