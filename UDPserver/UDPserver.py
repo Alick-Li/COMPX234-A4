@@ -62,7 +62,7 @@ def main():
                 if os.path.exists(filename):
                     threading.Thread(target=handle_client, args=(client_address, server_port, filename)).start()
                 else:
-                    response = f"ERR {filename} NOT_FOUND"
+                    response = f"ERROR {filename} NOT_FOUND"
                     server_socket.sendto(response.encode(), client_address)
         except IndexError:
             print(f"Invalid request format: {client_request}")

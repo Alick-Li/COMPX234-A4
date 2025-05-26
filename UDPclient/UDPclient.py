@@ -27,7 +27,7 @@ def download_file(socket, address, port, filename):
     if response is None:
         print(f"Failed to download {filename}: No response from server.")
         return False
-    elif response.startswith("ERR"):
+    elif response.startswith("ERROR"):
         print(f"Server error: {response}")
         return False
     elif response.startswith("OK"):
