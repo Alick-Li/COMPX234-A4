@@ -12,7 +12,7 @@ def handle_client(address, port, filename):
 
         file_size = os.path.getsize(filename)
 
-        response = f"OK {filename} {file_size} {client_port}"
+        response = f"OK {filename} SIZE {file_size} PORT {client_port}"
         client_socket.sendto(response.encode(), (address, port))
 
         with open(filename, 'rb') as f:
@@ -30,10 +30,10 @@ def handle_client(address, port, filename):
                     f.seek(start)
                     data = f.read(end - start + 1)
                     base64_data = base64.b64encode(data).decode()
-                    response = f"DATA {filename} {start} {end} {base64_data}"
+                    response = f"FILE {filename} OK START {start} END {end} DATA {base64_data}"
                     client_socket.sendto(response.encode(), address)
             
             client_socket.close()
 
     except Exception as e:
-        print(f"Error handling client {address}:{port} - {e}")
+        print(f"Error in file transmission: {e}")
